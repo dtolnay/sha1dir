@@ -3,6 +3,10 @@ name = "sha1dir"
 version = "0.0.0"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Checksum of a directory tree"
+repository = "https://github.com/dtolnay/sha1sum"
+readme = "README.md"
 
 [dependencies]
 memmap = "0.7"
