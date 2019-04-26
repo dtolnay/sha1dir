@@ -1,0 +1,16 @@
+[package]
+name = "sha1dir"
+version = "0.0.0"
+authors = ["David Tolnay <dtolnay@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+memmap = "0.7"
+num_cpus = "1.0"
+parking_lot = "0.7"
+rayon = "1.0"
+sha1 = "0.6"
+structopt = "0.2"
+
+[profile.release]
+panic = "abort"
