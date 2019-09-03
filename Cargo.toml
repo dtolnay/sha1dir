@@ -5,7 +5,7 @@ authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
 description = "Checksum of a directory tree"
-repository = "https://github.com/dtolnay/sha1sum"
+repository = "https://github.com/dtolnay/sha1dir"
 readme = "README.md"
 
 [dependencies]
