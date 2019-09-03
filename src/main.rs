@@ -31,7 +31,6 @@ fn die<P: AsRef<Path>, E: Display>(path: P, error: E) -> ! {
 
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Compute checksum of directory.")]
-#[structopt(author = "")]
 struct Opt {
     /// Number of hashes to compute in parallel
     #[structopt(short)]
