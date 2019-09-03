@@ -15,7 +15,7 @@ use std::process;
 use std::sync::Once;
 use structopt::StructOpt;
 
-type Result<T> = std::result::Result<T, Box<Error>>;
+type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 fn die<P: AsRef<Path>, E: Display>(path: P, error: E) -> ! {
     static DIE: Once = Once::new();
