@@ -8,6 +8,9 @@ description = "Checksum of a directory tree"
 repository = "https://github.com/dtolnay/sha1dir"
 readme = "README.md"
 
+[badges]
+travis-ci = { repository = "dtolnay/sha1dir" }
+
 [dependencies]
 memmap = "0.7"
 num_cpus = "1.0"
