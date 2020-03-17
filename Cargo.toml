@@ -21,3 +21,6 @@ structopt = "0.3"
 
 [profile.release]
 panic = "abort"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
