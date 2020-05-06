@@ -1,7 +1,7 @@
 sha1dir
 =======
 
-[![Build Status](https://api.travis-ci.com/dtolnay/sha1dir.svg?branch=master)](https://travis-ci.com/dtolnay/sha1dir)
+[![Build Status](https://img.shields.io/github/workflow/status/dtolnay/sha1dir/CI/master)](https://github.com/dtolnay/sha1dir/actions?query=branch%3Amaster)
 [![Latest Version](https://img.shields.io/crates/v/sha1dir.svg)](https://crates.io/crates/sha1dir)
 
 Compute a checksum of a directory tree, for example to validate that a directory
