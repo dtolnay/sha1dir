@@ -1,8 +1,9 @@
 sha1dir
 =======
 
-[![Build Status](https://img.shields.io/github/workflow/status/dtolnay/sha1dir/CI/master)](https://github.com/dtolnay/sha1dir/actions?query=branch%3Amaster)
-[![Latest Version](https://img.shields.io/crates/v/sha1dir.svg)](https://crates.io/crates/sha1dir)
+[<img alt="github" src="https://img.shields.io/badge/github-dtolnay/sha1dir-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/dtolnay/sha1dir)
+[<img alt="crates.io" src="https://img.shields.io/crates/v/sha1dir.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/sha1dir)
+[<img alt="build status" src="https://img.shields.io/github/workflow/status/dtolnay/sha1dir/CI/master?style=for-the-badge" height="20">](https://github.com/dtolnay/sha1dir/actions?query=branch%3Amaster)
 
 Compute a checksum of a directory tree, for example to validate that a directory
 was copied successfully to a different machine.
