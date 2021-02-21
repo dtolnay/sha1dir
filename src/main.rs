@@ -9,6 +9,7 @@
     clippy::let_underscore_drop,
     clippy::needless_pass_by_value,
     clippy::option_if_let_else,
+    clippy::unnecessary_wraps,
     clippy::unseparated_literal_suffix
 )]
 
@@ -23,7 +24,7 @@ use std::fmt::{self, Display};
 use std::fs::{self, File, Metadata};
 use std::io::{self, Write};
 use std::os::unix::ffi::OsStrExt;
-use std::os::unix::fs::MetadataExt;
+use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::Once;
@@ -146,6 +147,8 @@ fn entry<'scope>(scope: &Scope<'scope>, checksum: &'scope Checksum, path: &Path)
         symlink(checksum, path, metadata)
     } else if file_type.is_dir() {
         dir(scope, checksum, path, metadata)
+    } else if file_type.is_socket() {
+        socket(checksum, path, metadata)
     } else {
         die(path, "Unsupported file type");
     };
@@ -191,6 +194,13 @@ fn dir<'scope>(
         let child = child?.path();
         scope.spawn(move |scope| entry(scope, checksum, &child));
     }
+
+    Ok(())
+}
+
+fn socket(checksum: &Checksum, path: &Path, metadata: Metadata) -> Result<()> {
+    let sha = begin(path, &metadata, b's');
+    checksum.put(sha);
 
     Ok(())
 }
