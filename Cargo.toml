@@ -21,3 +21,7 @@ panic = "abort"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+
+[lib]
+name = "sha1dir"
+path = "src/lib.rs"
