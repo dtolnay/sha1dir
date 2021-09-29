@@ -1,3 +1,5 @@
+#![allow(clippy::new_without_default)]
+
 use memmap::Mmap;
 use parking_lot::Mutex;
 use rayon::{Scope, ThreadPoolBuilder};
