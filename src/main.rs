@@ -14,6 +14,7 @@
     clippy::unseparated_literal_suffix
 )]
 
+use clap::Parser;
 use memmap::Mmap;
 use parking_lot::Mutex;
 use rayon::{Scope, ThreadPoolBuilder};
@@ -29,7 +30,6 @@ use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::Once;
-use structopt::StructOpt;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
@@ -45,20 +45,20 @@ fn die<P: AsRef<Path>, E: Display>(path: P, error: E) -> ! {
     unreachable!()
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(about = "Compute checksum of directory.")]
+#[derive(Debug, Parser)]
+#[clap(about = "Compute checksum of directory.", version)]
 struct Opt {
     /// Number of hashes to compute in parallel
-    #[structopt(short)]
+    #[clap(short)]
     jobs: Option<usize>,
 
     /// Directories to hash
-    #[structopt(value_name = "DIR", parse(from_os_str))]
+    #[clap(value_name = "DIR", parse(from_os_str))]
     dirs: Vec<PathBuf>,
 }
 
 fn main() {
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     configure_thread_pool(&opt);
 
