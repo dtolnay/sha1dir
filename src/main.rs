@@ -46,7 +46,7 @@ fn die<P: AsRef<Path>, E: Display>(path: P, error: E) -> ! {
 }
 
 #[derive(Debug, Parser)]
-#[clap(about = "Compute checksum of directory.", version)]
+#[clap(about = "Compute checksum of directory.", version, author)]
 struct Opt {
     /// Number of hashes to compute in parallel
     #[clap(short)]
