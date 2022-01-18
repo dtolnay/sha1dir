@@ -17,7 +17,7 @@
 use memmap::Mmap;
 use parking_lot::Mutex;
 use rayon::{Scope, ThreadPoolBuilder};
-use sha1::Sha1;
+use sha1::{Digest, Sha1};
 use std::cmp;
 use std::env;
 use std::error::Error;
@@ -123,8 +123,8 @@ impl Display for Checksum {
 
 impl Checksum {
     fn put(&self, rhs: Sha1) {
-        for (lhs, rhs) in self.bytes.lock().iter_mut().zip(&rhs.digest().bytes()) {
-            *lhs ^= *rhs;
+        for (lhs, rhs) in self.bytes.lock().iter_mut().zip(rhs.finalize()) {
+            *lhs ^= rhs;
         }
     }
 }
