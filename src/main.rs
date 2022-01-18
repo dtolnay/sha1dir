@@ -215,3 +215,8 @@ fn begin(path: &Path, metadata: &Metadata, kind: u8) -> Sha1 {
     sha.update(&metadata.mode().to_le_bytes());
     sha
 }
+
+#[test]
+fn test_cli() {
+    <Opt as clap::IntoApp>::into_app().debug_assert();
+}
