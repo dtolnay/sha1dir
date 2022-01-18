@@ -9,12 +9,12 @@ repository = "https://github.com/dtolnay/sha1dir"
 readme = "README.md"
 
 [dependencies]
+clap = { version = "3.0", default-features = false, features = ["derive", "std", "suggestions"] }
 memmap = "0.7"
 num_cpus = "1.0"
 parking_lot = "0.11"
 rayon = "1.0"
 sha1 = "0.10"
-structopt = "0.3"
 
 [profile.release]
 panic = "abort"
