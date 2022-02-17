@@ -218,5 +218,5 @@ fn begin(path: &Path, metadata: &Metadata, kind: u8) -> Sha1 {
 
 #[test]
 fn test_cli() {
-    <Opt as clap::IntoApp>::into_app().debug_assert();
+    <Opt as clap::CommandFactory>::command().debug_assert();
 }
