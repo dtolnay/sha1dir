@@ -49,11 +49,11 @@ fn die<P: AsRef<Path>, E: Display>(path: P, error: E) -> ! {
 #[clap(about = "Compute checksum of directory.", version, author)]
 struct Opt {
     /// Number of hashes to compute in parallel
-    #[clap(short)]
+    #[clap(short, action)]
     jobs: Option<usize>,
 
     /// Directories to hash
-    #[clap(value_name = "DIR", parse(from_os_str))]
+    #[clap(value_name = "DIR", action)]
     dirs: Vec<PathBuf>,
 }
 
