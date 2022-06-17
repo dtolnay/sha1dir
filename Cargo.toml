@@ -2,7 +2,7 @@
 name = "sha1dir"
 version = "1.0.4"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Checksum of a directory tree"
 repository = "https://github.com/dtolnay/sha1dir"
