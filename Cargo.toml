@@ -2,11 +2,11 @@
 name = "sha1dir"
 version = "1.0.4"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
+description = "Checksum of a directory tree"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-description = "Checksum of a directory tree"
-repository = "https://github.com/dtolnay/sha1dir"
 readme = "README.md"
+repository = "https://github.com/dtolnay/sha1dir"
 
 [dependencies]
 clap = { version = "3.2.5", default-features = false, features = ["deprecated", "derive", "std", "suggestions"] }
