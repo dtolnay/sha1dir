@@ -209,10 +209,10 @@ fn socket(checksum: &Checksum, path: &Path, metadata: Metadata) -> Result<()> {
 fn begin(path: &Path, metadata: &Metadata, kind: u8) -> Sha1 {
     let mut sha = Sha1::new();
     let path_bytes = path.as_os_str().as_bytes();
-    sha.update(&[kind]);
-    sha.update(&(path_bytes.len() as u32).to_le_bytes());
+    sha.update([kind]);
+    sha.update((path_bytes.len() as u32).to_le_bytes());
     sha.update(path_bytes);
-    sha.update(&metadata.mode().to_le_bytes());
+    sha.update(metadata.mode().to_le_bytes());
     sha
 }
 
