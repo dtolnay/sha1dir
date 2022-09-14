@@ -6,7 +6,6 @@ categories = ["command-line-utilities"]
 description = "Checksum of a directory tree"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-readme = "README.md"
 repository = "https://github.com/dtolnay/sha1dir"
 
 [dependencies]
