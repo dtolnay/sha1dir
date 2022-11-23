@@ -6,7 +6,6 @@
 
 #![allow(
     clippy::cast_possible_truncation,
-    clippy::let_underscore_drop,
     clippy::needless_collect,
     clippy::needless_pass_by_value,
     clippy::option_if_let_else,
