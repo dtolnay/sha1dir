@@ -60,6 +60,35 @@ struct Opt {
     /// Whether to ignore unknown filetypes (otherwise fatal)
     #[arg(long)]
     ignore_unknown_filetypes: bool,
+
+    /// Whether to exclude the root directory metadata from the checksum
+    #[arg(long)]
+    exclude_rootdir_metadata: bool,
+}
+
+#[derive(Debug, Copy, Clone)]
+enum Optional {
+    Some,
+    None,
+}
+
+impl Optional {
+    fn apply<T>(&self, item: T) -> Option<T> {
+        match self {
+            Self::Some => Some(item),
+            Self::None => None,
+        }
+    }
+}
+
+impl From<bool> for Optional {
+    fn from(value: bool) -> Self {
+        if value {
+            Self::Some
+        } else {
+            Self::None
+        }
+    }
 }
 
 fn main() {
@@ -67,8 +96,10 @@ fn main() {
 
     configure_thread_pool(&opt);
 
+    let metadata_optional = Optional::from(!opt.exclude_rootdir_metadata);
+
     if opt.dirs.is_empty() {
-        let checksum = checksum_current_dir(opt.ignore_unknown_filetypes);
+        let checksum = checksum_current_dir(opt.ignore_unknown_filetypes, metadata_optional);
         let _ = writeln!(io::stdout(), "{}", checksum);
         return;
     }
@@ -79,7 +110,7 @@ fn main() {
         if let Err(error) = env::set_current_dir(canonical) {
             die(label, error);
         }
-        let checksum = checksum_current_dir(opt.ignore_unknown_filetypes);
+        let checksum = checksum_current_dir(opt.ignore_unknown_filetypes, metadata_optional);
         let _ = writeln!(io::stdout(), "{}  {}", checksum, label.display());
     }
 }
@@ -134,9 +165,17 @@ impl Checksum {
     }
 }
 
-fn checksum_current_dir(ignore_unknown_filetypes: bool) -> Checksum {
+fn checksum_current_dir(ignore_unknown_filetypes: bool, metadata_optional: Optional) -> Checksum {
     let checksum = Checksum::new();
-    rayon::scope(|scope| entry(scope, &checksum, Path::new("."), ignore_unknown_filetypes));
+    rayon::scope(|scope| {
+        entry(
+            scope,
+            &checksum,
+            Path::new("."),
+            ignore_unknown_filetypes,
+            metadata_optional,
+        )
+    });
     checksum
 }
 
@@ -145,6 +184,7 @@ fn entry<'scope>(
     checksum: &'scope Checksum,
     path: &Path,
     ignore_unknown_filetypes: bool,
+    metadata_optional: Optional,
 ) {
     let metadata = match path.symlink_metadata() {
         Ok(metadata) => metadata,
@@ -157,7 +197,13 @@ fn entry<'scope>(
     } else if file_type.is_symlink() {
         symlink(checksum, path, metadata)
     } else if file_type.is_dir() {
-        dir(scope, checksum, path, ignore_unknown_filetypes, metadata)
+        dir(
+            scope,
+            checksum,
+            path,
+            ignore_unknown_filetypes,
+            metadata_optional.apply(metadata),
+        )
     } else if file_type.is_socket() {
         socket(checksum, path, metadata)
     } else if ignore_unknown_filetypes {
@@ -172,7 +218,7 @@ fn entry<'scope>(
 }
 
 fn file(checksum: &Checksum, path: &Path, metadata: Metadata) -> Result<()> {
-    let mut sha = begin(path, &metadata, b'f');
+    let mut sha = begin(path, Some(&metadata), b'f');
 
     // Enforced by memmap: "memory map must have a non-zero length"
     if metadata.len() > 0 {
@@ -187,7 +233,7 @@ fn file(checksum: &Checksum, path: &Path, metadata: Metadata) -> Result<()> {
 }
 
 fn symlink(checksum: &Checksum, path: &Path, metadata: Metadata) -> Result<()> {
-    let mut sha = begin(path, &metadata, b'l');
+    let mut sha = begin(path, Some(&metadata), b'l');
     sha.update(path.read_link()?.as_os_str().as_bytes());
     checksum.put(sha);
 
@@ -199,33 +245,43 @@ fn dir<'scope>(
     checksum: &'scope Checksum,
     path: &Path,
     ignore_unknown_filetypes: bool,
-    metadata: Metadata,
+    metadata: Option<Metadata>,
 ) -> Result<()> {
-    let sha = begin(path, &metadata, b'd');
+    let sha = begin(path, metadata.as_ref(), b'd');
     checksum.put(sha);
 
     for child in path.read_dir()? {
         let child = child?.path();
-        scope.spawn(move |scope| entry(scope, checksum, &child, ignore_unknown_filetypes));
+        scope.spawn(move |scope| {
+            entry(
+                scope,
+                checksum,
+                &child,
+                ignore_unknown_filetypes,
+                Optional::Some,
+            )
+        });
     }
 
     Ok(())
 }
 
 fn socket(checksum: &Checksum, path: &Path, metadata: Metadata) -> Result<()> {
-    let sha = begin(path, &metadata, b's');
+    let sha = begin(path, Some(&metadata), b's');
     checksum.put(sha);
 
     Ok(())
 }
 
-fn begin(path: &Path, metadata: &Metadata, kind: u8) -> Sha1 {
+fn begin(path: &Path, metadata: Option<&Metadata>, kind: u8) -> Sha1 {
     let mut sha = Sha1::new();
     let path_bytes = path.as_os_str().as_bytes();
     sha.update([kind]);
     sha.update((path_bytes.len() as u32).to_le_bytes());
     sha.update(path_bytes);
-    sha.update(metadata.mode().to_le_bytes());
+    if let Some(metadata) = metadata {
+        sha.update(metadata.mode().to_le_bytes());
+    }
     sha
 }
 

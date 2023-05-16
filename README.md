@@ -35,6 +35,9 @@ entry. The hash for each directory entry is the hash of the following body:
 
 The resulting checksum is 160 bits wide like SHA-1.
 
+The mode for the topmost directory may be excluded from the checksum using the
+`--exclude-rootdir-metadata` command line option.
+
 <br>
 
 #### License
