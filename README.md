@@ -33,6 +33,8 @@ entry. The hash for each directory entry is the hash of the following body:
 
 - For directories — the one byte `'d'`, and the path length / path / mode.
 
+Unknown filetypes are fatal without the `--ignore-unknown-filetypes` command line option.
+
 The resulting checksum is 160 bits wide like SHA-1.
 
 <br>
