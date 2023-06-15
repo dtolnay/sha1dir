@@ -39,7 +39,13 @@ fn die<P: AsRef<Path>, E: Display>(path: P, error: E) -> ! {
 
     DIE.call_once(|| {
         let path = path.as_ref().display();
-        let _ = writeln!(io::stderr(), "sha1sum: {}: {}", path, error);
+        let _ = writeln!(
+            io::stderr(),
+            "{}: {}: {}",
+            env!("CARGO_BIN_NAME"),
+            path,
+            error,
+        );
         process::exit(1);
     });
 
