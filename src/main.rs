@@ -160,12 +160,10 @@ fn entry<'scope>(
         dir(scope, checksum, path, ignore_unknown_filetypes, metadata)
     } else if file_type.is_socket() {
         socket(checksum, path, metadata)
+    } else if ignore_unknown_filetypes {
+        Ok(())
     } else {
-        if ignore_unknown_filetypes {
-            Ok(())
-        } else {
-            die(path, "Unsupported file type");
-        }
+        die(path, "Unsupported file type");
     };
 
     if let Err(error) = result {
