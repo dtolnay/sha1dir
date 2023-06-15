@@ -142,7 +142,17 @@ impl Checksum {
 
 fn checksum_current_dir(ignore_unknown_filetypes: bool) -> Checksum {
     let checksum = Checksum::new();
-    rayon::scope(|scope| entry(scope, &checksum, Path::new("."), ignore_unknown_filetypes));
+    rayon::scope(|scope| {
+        let path = Path::new(".");
+        let metadata = match path.symlink_metadata() {
+            Ok(metadata) => metadata,
+            Err(error) => die(path, error),
+        };
+        let result = dir(scope, &checksum, path, ignore_unknown_filetypes, metadata);
+        if let Err(error) = result {
+            die(path, error);
+        }
+    });
     checksum
 }
 
