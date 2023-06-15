@@ -56,6 +56,10 @@ struct Opt {
     /// Directories to hash
     #[arg(value_name = "DIR")]
     dirs: Vec<PathBuf>,
+
+    /// Whether to ignore unknown filetypes (otherwise fatal)
+    #[arg(long)]
+    ignore_unknown_filetypes: bool,
 }
 
 fn main() {
@@ -64,7 +68,7 @@ fn main() {
     configure_thread_pool(&opt);
 
     if opt.dirs.is_empty() {
-        let checksum = checksum_current_dir();
+        let checksum = checksum_current_dir(opt.ignore_unknown_filetypes);
         let _ = writeln!(io::stdout(), "{}", checksum);
         return;
     }
@@ -75,7 +79,7 @@ fn main() {
         if let Err(error) = env::set_current_dir(canonical) {
             die(label, error);
         }
-        let checksum = checksum_current_dir();
+        let checksum = checksum_current_dir(opt.ignore_unknown_filetypes);
         let _ = writeln!(io::stdout(), "{}  {}", checksum, label.display());
     }
 }
@@ -130,13 +134,18 @@ impl Checksum {
     }
 }
 
-fn checksum_current_dir() -> Checksum {
+fn checksum_current_dir(ignore_unknown_filetypes: bool) -> Checksum {
     let checksum = Checksum::new();
-    rayon::scope(|scope| entry(scope, &checksum, Path::new(".")));
+    rayon::scope(|scope| entry(scope, &checksum, Path::new("."), ignore_unknown_filetypes));
     checksum
 }
 
-fn entry<'scope>(scope: &Scope<'scope>, checksum: &'scope Checksum, path: &Path) {
+fn entry<'scope>(
+    scope: &Scope<'scope>,
+    checksum: &'scope Checksum,
+    path: &Path,
+    ignore_unknown_filetypes: bool,
+) {
     let metadata = match path.symlink_metadata() {
         Ok(metadata) => metadata,
         Err(error) => die(path, error),
@@ -148,9 +157,11 @@ fn entry<'scope>(scope: &Scope<'scope>, checksum: &'scope Checksum, path: &Path)
     } else if file_type.is_symlink() {
         symlink(checksum, path, metadata)
     } else if file_type.is_dir() {
-        dir(scope, checksum, path, metadata)
+        dir(scope, checksum, path, ignore_unknown_filetypes, metadata)
     } else if file_type.is_socket() {
         socket(checksum, path, metadata)
+    } else if ignore_unknown_filetypes {
+        Ok(())
     } else {
         die(path, "Unsupported file type");
     };
@@ -187,6 +198,7 @@ fn dir<'scope>(
     scope: &Scope<'scope>,
     checksum: &'scope Checksum,
     path: &Path,
+    ignore_unknown_filetypes: bool,
     metadata: Metadata,
 ) -> Result<()> {
     let sha = begin(path, &metadata, b'd');
@@ -194,7 +206,7 @@ fn dir<'scope>(
 
     for child in path.read_dir()? {
         let child = child?.path();
-        scope.spawn(move |scope| entry(scope, checksum, &child));
+        scope.spawn(move |scope| entry(scope, checksum, &child, ignore_unknown_filetypes));
     }
 
     Ok(())
