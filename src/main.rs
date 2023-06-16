@@ -148,9 +148,25 @@ fn checksum_current_dir(ignore_unknown_filetypes: bool) -> Checksum {
             Ok(metadata) => metadata,
             Err(error) => die(path, error),
         };
-        let result = dir(scope, &checksum, path, ignore_unknown_filetypes, metadata);
-        if let Err(error) = result {
-            die(path, error);
+
+        let sha = begin(path, &metadata, b'd');
+        checksum.put(sha);
+
+        let read_dir = match path.read_dir() {
+            Ok(read_dir) => read_dir,
+            Err(error) => die(path, error),
+        };
+
+        for child in read_dir {
+            let child = match child {
+                Ok(child) => child,
+                Err(error) => die(path, error),
+            };
+            let child_path = child.path();
+            scope.spawn({
+                let checksum = &checksum;
+                move |scope| entry(scope, checksum, &child_path, ignore_unknown_filetypes)
+            });
         }
     });
     checksum
