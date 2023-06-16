@@ -144,12 +144,8 @@ impl Checksum {
 fn checksum_current_dir(label: &Path, ignore_unknown_filetypes: bool) -> Checksum {
     let checksum = Checksum::new();
     rayon::scope(|scope| {
-        let path = Path::new(".");
         if let Err(error) = (|| -> Result<()> {
-            let metadata = path.symlink_metadata()?;
-            let sha = begin(path, &metadata, b'd');
-            checksum.put(sha);
-            for child in path.read_dir()? {
+            for child in Path::new(".").read_dir()? {
                 let child = child?;
                 scope.spawn({
                     let checksum = &checksum;
