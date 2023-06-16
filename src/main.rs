@@ -74,7 +74,8 @@ fn main() {
     configure_thread_pool(&opt);
 
     if opt.dirs.is_empty() {
-        let checksum = checksum_current_dir(opt.ignore_unknown_filetypes);
+        let path = Path::new(".");
+        let checksum = checksum_current_dir(path, opt.ignore_unknown_filetypes);
         let _ = writeln!(io::stdout(), "{}", checksum);
         return;
     }
@@ -85,7 +86,7 @@ fn main() {
         if let Err(error) = env::set_current_dir(canonical) {
             die(label, error);
         }
-        let checksum = checksum_current_dir(opt.ignore_unknown_filetypes);
+        let checksum = checksum_current_dir(&label, opt.ignore_unknown_filetypes);
         let _ = writeln!(io::stdout(), "{}  {}", checksum, label.display());
     }
 }
@@ -140,7 +141,7 @@ impl Checksum {
     }
 }
 
-fn checksum_current_dir(ignore_unknown_filetypes: bool) -> Checksum {
+fn checksum_current_dir(label: &Path, ignore_unknown_filetypes: bool) -> Checksum {
     let checksum = Checksum::new();
     rayon::scope(|scope| {
         let path = Path::new(".");
@@ -149,15 +150,23 @@ fn checksum_current_dir(ignore_unknown_filetypes: bool) -> Checksum {
             let sha = begin(path, &metadata, b'd');
             checksum.put(sha);
             for child in path.read_dir()? {
-                let child = child?.path();
+                let child = child?;
                 scope.spawn({
                     let checksum = &checksum;
-                    move |scope| entry(scope, checksum, &child, ignore_unknown_filetypes)
+                    move |scope| {
+                        entry(
+                            scope,
+                            label,
+                            checksum,
+                            Path::new(&child.file_name()),
+                            ignore_unknown_filetypes,
+                        );
+                    }
                 });
             }
             Ok(())
         })() {
-            die(path, error);
+            die(label, error);
         }
     });
     checksum
@@ -165,13 +174,14 @@ fn checksum_current_dir(ignore_unknown_filetypes: bool) -> Checksum {
 
 fn entry<'scope>(
     scope: &Scope<'scope>,
+    base: &'scope Path,
     checksum: &'scope Checksum,
     path: &Path,
     ignore_unknown_filetypes: bool,
 ) {
     let metadata = match path.symlink_metadata() {
         Ok(metadata) => metadata,
-        Err(error) => die(path, error),
+        Err(error) => die(base.join(path), error),
     };
 
     let file_type = metadata.file_type();
@@ -180,17 +190,24 @@ fn entry<'scope>(
     } else if file_type.is_symlink() {
         symlink(checksum, path, metadata)
     } else if file_type.is_dir() {
-        dir(scope, checksum, path, ignore_unknown_filetypes, metadata)
+        dir(
+            scope,
+            base,
+            checksum,
+            path,
+            ignore_unknown_filetypes,
+            metadata,
+        )
     } else if file_type.is_socket() {
         socket(checksum, path, metadata)
     } else if ignore_unknown_filetypes {
         Ok(())
     } else {
-        die(path, "Unsupported file type");
+        die(base.join(path), "Unsupported file type");
     };
 
     if let Err(error) = result {
-        die(path, error);
+        die(base.join(path), error);
     }
 }
 
@@ -219,6 +236,7 @@ fn symlink(checksum: &Checksum, path: &Path, metadata: Metadata) -> Result<()> {
 
 fn dir<'scope>(
     scope: &Scope<'scope>,
+    base: &'scope Path,
     checksum: &'scope Checksum,
     path: &Path,
     ignore_unknown_filetypes: bool,
@@ -229,7 +247,7 @@ fn dir<'scope>(
 
     for child in path.read_dir()? {
         let child = child?.path();
-        scope.spawn(move |scope| entry(scope, checksum, &child, ignore_unknown_filetypes));
+        scope.spawn(move |scope| entry(scope, base, checksum, &child, ignore_unknown_filetypes));
     }
 
     Ok(())
