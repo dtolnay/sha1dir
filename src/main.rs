@@ -65,7 +65,7 @@ struct Opt {
     dirs: Vec<PathBuf>,
 
     /// Whether and where to write individual checksums
-    #[arg(long)]
+    #[arg(long, value_name = "FILE")]
     write_checksums: Option<PathBuf>,
 
     /// Whether to ignore unknown filetypes (otherwise fatal)
