@@ -1,6 +1,6 @@
 [package]
 name = "sha1dir"
-version = "1.0.9"
+version = "1.0.10"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 categories = ["command-line-utilities"]
 description = "Checksum of a directory tree"
