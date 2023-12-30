@@ -9,7 +9,6 @@
     clippy::let_underscore_untyped,
     clippy::needless_collect,
     clippy::needless_pass_by_value,
-    clippy::option_if_let_else,
     clippy::uninlined_format_args,
     clippy::unnecessary_wraps,
     clippy::unseparated_literal_suffix
