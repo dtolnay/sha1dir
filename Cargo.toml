@@ -8,6 +8,10 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/dtolnay/sha1dir"
 
+[lib]
+name = "sha1dir"
+path = "src/lib.rs"
+
 [dependencies]
 clap = { version = "4", features = ["deprecated", "derive"] }
 memmap = "0.7"
