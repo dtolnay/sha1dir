@@ -7,6 +7,7 @@ description = "Checksum of a directory tree"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/dtolnay/sha1dir"
+rust-version = "1.80"
 
 [dependencies]
 clap = { version = "4", features = ["deprecated", "derive"] }
