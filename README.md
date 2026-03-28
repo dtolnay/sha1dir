@@ -35,6 +35,10 @@ entry. The hash for each directory entry is the hash of the following body:
 
 The resulting checksum is 160 bits wide like SHA-1.
 
+If the checksum is unexpectedly different, the `--write-checksums` option may
+be used to dump individual checksums into the specified file, to facilitate
+entry-by-entry comparison (after sorting).
+
 <br>
 
 #### License
