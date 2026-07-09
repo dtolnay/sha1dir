@@ -29,6 +29,7 @@ use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 use std::process;
+use std::sync::Arc;
 use std::sync::Once;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
@@ -62,6 +63,10 @@ struct Opt {
     #[arg(value_name = "DIR")]
     dirs: Vec<PathBuf>,
 
+    /// Whether and where to write individual checksums
+    #[arg(long, value_name = "FILE")]
+    write_checksums: Option<PathBuf>,
+
     /// Whether to ignore unknown filetypes (otherwise fatal)
     #[arg(long)]
     ignore_unknown_filetypes: bool,
@@ -72,9 +77,13 @@ fn main() {
 
     configure_thread_pool(&opt);
 
+    let write_checksums = opt
+        .write_checksums
+        .map(|path| Arc::new(Mutex::new(File::create(path).unwrap())));
+
     if opt.dirs.is_empty() {
         let path = Path::new(".");
-        let checksum = checksum_current_dir(path, opt.ignore_unknown_filetypes);
+        let checksum = checksum_current_dir(path, opt.ignore_unknown_filetypes, &write_checksums);
         let _ = writeln!(io::stdout(), "{}", checksum);
         return;
     }
@@ -85,7 +94,7 @@ fn main() {
         if let Err(error) = env::set_current_dir(canonical) {
             die(label, error);
         }
-        let checksum = checksum_current_dir(&label, opt.ignore_unknown_filetypes);
+        let checksum = checksum_current_dir(&label, opt.ignore_unknown_filetypes, &write_checksums);
         let _ = writeln!(io::stdout(), "{}  {}", checksum, label.display());
     }
 }
@@ -140,7 +149,11 @@ impl Checksum {
     }
 }
 
-fn checksum_current_dir(label: &Path, ignore_unknown_filetypes: bool) -> Checksum {
+fn checksum_current_dir(
+    label: &Path,
+    ignore_unknown_filetypes: bool,
+    write_checksums: &Option<Arc<Mutex<File>>>,
+) -> Checksum {
     let checksum = Checksum::new();
     rayon::scope(|scope| {
         if let Err(error) = (|| -> Result<()> {
@@ -155,6 +168,7 @@ fn checksum_current_dir(label: &Path, ignore_unknown_filetypes: bool) -> Checksu
                             checksum,
                             Path::new(&child.file_name()),
                             ignore_unknown_filetypes,
+                            write_checksums,
                         );
                     }
                 });
@@ -173,6 +187,7 @@ fn entry<'scope>(
     checksum: &'scope Checksum,
     path: &Path,
     ignore_unknown_filetypes: bool,
+    write_checksums: &'scope Option<Arc<Mutex<File>>>,
 ) {
     let metadata = match path.symlink_metadata() {
         Ok(metadata) => metadata,
@@ -181,9 +196,9 @@ fn entry<'scope>(
 
     let file_type = metadata.file_type();
     let result = if file_type.is_file() {
-        file(checksum, path, metadata)
+        file(checksum, path, metadata, write_checksums)
     } else if file_type.is_symlink() {
-        symlink(checksum, path, metadata)
+        symlink(checksum, path, metadata, write_checksums)
     } else if file_type.is_dir() {
         dir(
             scope,
@@ -192,9 +207,10 @@ fn entry<'scope>(
             path,
             ignore_unknown_filetypes,
             metadata,
+            write_checksums,
         )
     } else if file_type.is_socket() {
-        socket(checksum, path, metadata)
+        socket(checksum, path, metadata, write_checksums)
     } else if ignore_unknown_filetypes {
         Ok(())
     } else {
@@ -206,7 +222,12 @@ fn entry<'scope>(
     }
 }
 
-fn file(checksum: &Checksum, path: &Path, metadata: Metadata) -> Result<()> {
+fn file(
+    checksum: &Checksum,
+    path: &Path,
+    metadata: Metadata,
+    write_checksums: &Option<Arc<Mutex<File>>>,
+) -> Result<()> {
     let mut sha = begin(path, &metadata, b'f');
 
     // Enforced by memmap: "memory map must have a non-zero length"
@@ -216,14 +237,28 @@ fn file(checksum: &Checksum, path: &Path, metadata: Metadata) -> Result<()> {
         sha.update(&mmap);
     }
 
+    if let Some(w) = write_checksums {
+        write_sha(w, path, &sha)?;
+    }
+
     checksum.put(sha);
 
     Ok(())
 }
 
-fn symlink(checksum: &Checksum, path: &Path, metadata: Metadata) -> Result<()> {
+fn symlink(
+    checksum: &Checksum,
+    path: &Path,
+    metadata: Metadata,
+    write_checksums: &Option<Arc<Mutex<File>>>,
+) -> Result<()> {
     let mut sha = begin(path, &metadata, b'l');
     sha.update(path.read_link()?.as_os_str().as_bytes());
+
+    if let Some(w) = write_checksums {
+        write_sha(w, path, &sha)?;
+    }
+
     checksum.put(sha);
 
     Ok(())
@@ -236,20 +271,45 @@ fn dir<'scope>(
     path: &Path,
     ignore_unknown_filetypes: bool,
     metadata: Metadata,
+    write_checksums: &'scope Option<Arc<Mutex<File>>>,
 ) -> Result<()> {
     let sha = begin(path, &metadata, b'd');
+
+    if let Some(w) = write_checksums {
+        write_sha(w, path, &sha)?;
+    }
+
     checksum.put(sha);
 
     for child in path.read_dir()? {
         let child = child?.path();
-        scope.spawn(move |scope| entry(scope, base, checksum, &child, ignore_unknown_filetypes));
+        scope.spawn(move |scope| {
+            entry(
+                scope,
+                base,
+                checksum,
+                &child,
+                ignore_unknown_filetypes,
+                write_checksums,
+            )
+        });
     }
 
     Ok(())
 }
 
-fn socket(checksum: &Checksum, path: &Path, metadata: Metadata) -> Result<()> {
+fn socket(
+    checksum: &Checksum,
+    path: &Path,
+    metadata: Metadata,
+    write_checksums: &Option<Arc<Mutex<File>>>,
+) -> Result<()> {
     let sha = begin(path, &metadata, b's');
+
+    if let Some(w) = write_checksums {
+        write_sha(w, path, &sha)?;
+    }
+
     checksum.put(sha);
 
     Ok(())
@@ -263,6 +323,12 @@ fn begin(path: &Path, metadata: &Metadata, kind: u8) -> Sha1 {
     sha.update(path_bytes);
     sha.update(metadata.mode().to_le_bytes());
     sha
+}
+
+fn write_sha(f: &Arc<Mutex<File>>, path: &Path, sha: &Sha1) -> Result<()> {
+    let sha = sha.clone();
+    writeln!(f.lock(), "{} {:x}", path.to_string_lossy(), sha.finalize())?;
+    Ok(())
 }
 
 #[test]
